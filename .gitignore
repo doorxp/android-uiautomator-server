@@ -9,3 +9,4 @@ android-uiautomator-server.iml
 *.iml
 .settings/
 .project
+app/release
