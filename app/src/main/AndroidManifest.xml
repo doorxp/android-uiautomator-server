@@ -73,7 +73,9 @@
             <intent-filter>
                 <action android:name="send.mock" />
                 <action android:name="stop.mock" />
-
+                <action android:name="led_on" />
+                <action android:name="led_off" />
+                <action android:name="public_ip" />
             </intent-filter>
         </receiver>
 

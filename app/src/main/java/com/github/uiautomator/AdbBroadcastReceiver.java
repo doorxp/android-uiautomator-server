@@ -10,7 +10,15 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.location.LocationManager;
 import android.os.Build;
+import android.os.Bundle;
 import android.util.Log;
+
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public class AdbBroadcastReceiver extends BroadcastReceiver {
 
@@ -20,7 +28,12 @@ public class AdbBroadcastReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (intent.getAction().equals("stop.mock")) {
+        String action = intent.getAction();
+        if(action == null) {
+            return;
+        }
+        action = action.toLowerCase();
+        if (action.equals("stop.mock")) {
             if (mockGPS != null) {
                 mockGPS.shutdown();
             }
@@ -28,7 +41,7 @@ public class AdbBroadcastReceiver extends BroadcastReceiver {
                 mockWifi.shutdown();
             }
         }
-        else if(intent.getAction().equals("led.on")) {
+        else if(action.equals("led_on")) {
             if(!context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)) {
                 return;
             }
@@ -50,7 +63,7 @@ public class AdbBroadcastReceiver extends BroadcastReceiver {
                 Log.e("AdbIME", "Failed to access camera", e);
             }
         }
-        else if(intent.getAction().equals("led.off")) {
+        else if(action.equals("led_off")) {
             if(!context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)) {
                 return;
             }
@@ -72,7 +85,35 @@ public class AdbBroadcastReceiver extends BroadcastReceiver {
                 Log.e("AdbIME", "Failed to access camera", e);
             }
         }
-        else {
+        else if(action.equals("public_ip")) {
+            OkHttpClient client = new OkHttpClient.Builder()
+                    .connectTimeout(10, TimeUnit.SECONDS)
+                    .writeTimeout(10, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    .build();
+            Bundle extras = new Bundle();
+            Request request = new Request.Builder().url("http://ifconfig.me").build();
+            try(Response response = client.newCall(request).execute()) {
+                if(!response.isSuccessful()) {
+                    throw new Exception("");
+                }
+                extras.putString("http", response.body().string());
+            } catch (Exception ignore) {
+
+            }
+
+            request = new Request.Builder().url("https://ifconfig.me").build();
+            try(Response response = client.newCall(request).execute()) {
+                if(!response.isSuccessful()) {
+                    throw new Exception("");
+                }
+                extras.putString("https", response.body().string());
+            } catch (Exception ignore) {
+
+            }
+            setResultExtras(extras);
+        }
+        else if(action.equals("send.mock")) {
             mockGPS = new MockLocationProvider(LocationManager.GPS_PROVIDER, context);
             mockWifi = new MockLocationProvider(LocationManager.NETWORK_PROVIDER, context);
 
