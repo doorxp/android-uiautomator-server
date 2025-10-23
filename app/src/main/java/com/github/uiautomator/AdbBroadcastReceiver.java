@@ -11,9 +11,14 @@ import android.hardware.camera2.CameraManager;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.JsonWriter;
 import android.util.Log;
 
 import java.io.IOException;
+import java.io.StringWriter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
@@ -25,6 +30,21 @@ public class AdbBroadcastReceiver extends BroadcastReceiver {
     private MockLocationProvider mockGPS;
     private MockLocationProvider mockWifi;
     private static final String TAG = "MockGPSReceiver";
+
+    private String checkIP(OkHttpClient client, String url) {
+        Request request = new Request.Builder().url(url)
+                .header("Accept", "text/plain")  // 明确指定接受纯文本
+                .header("User-Agent", "curl/7.64.1")  // 模拟 curl 客户端
+                .build();
+        try(Response response = client.newCall(request).execute()) {
+            if(!response.isSuccessful()) {
+               return null;
+            }
+            return response.body().string().trim();
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -86,32 +106,29 @@ public class AdbBroadcastReceiver extends BroadcastReceiver {
             }
         }
         else if(action.equals("public_ip")) {
-            OkHttpClient client = new OkHttpClient.Builder()
-                    .connectTimeout(10, TimeUnit.SECONDS)
-                    .writeTimeout(10, TimeUnit.SECONDS)
-                    .readTimeout(30, TimeUnit.SECONDS)
-                    .build();
-            Bundle extras = new Bundle();
-            Request request = new Request.Builder().url("http://ifconfig.me").build();
-            try(Response response = client.newCall(request).execute()) {
-                if(!response.isSuccessful()) {
-                    throw new Exception("");
+            Log.i(TAG, "onReceive: " + action);
+            final PendingResult pendingResult = goAsync();
+            new Thread(()->{
+                OkHttpClient client = new OkHttpClient.Builder().build();
+                String http_ip = AdbBroadcastReceiver.this.checkIP(client, "http://checkip.amazonaws.com");
+                String https_ip = AdbBroadcastReceiver.this.checkIP(client, "https://checkip.amazonaws.com");
+                StringWriter stringWriter = new StringWriter();
+                JsonWriter jsonWriter = new JsonWriter(stringWriter);
+                try {
+                    jsonWriter.beginObject();
+                    if (http_ip != null) {
+                        jsonWriter.name("http_ip").value(http_ip);
+                    }
+                    if (https_ip != null) {
+                        jsonWriter.name("https_ip").value(https_ip);
+                    }
+                    jsonWriter.endObject();
+                } catch (IOException ignore) {
+
                 }
-                extras.putString("http", response.body().string());
-            } catch (Exception ignore) {
-
-            }
-
-            request = new Request.Builder().url("https://ifconfig.me").build();
-            try(Response response = client.newCall(request).execute()) {
-                if(!response.isSuccessful()) {
-                    throw new Exception("");
-                }
-                extras.putString("https", response.body().string());
-            } catch (Exception ignore) {
-
-            }
-            setResultExtras(extras);
+                pendingResult.setResultData(stringWriter.toString());
+                pendingResult.finish();
+            }).start();
         }
         else if(action.equals("send.mock")) {
             mockGPS = new MockLocationProvider(LocationManager.GPS_PROVIDER, context);
