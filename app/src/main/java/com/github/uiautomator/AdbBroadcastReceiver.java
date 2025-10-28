@@ -106,21 +106,18 @@ public class AdbBroadcastReceiver extends BroadcastReceiver {
             }
         }
         else if(action.equals("public_ip")) {
-            Log.i(TAG, "onReceive: " + action);
+            final String url = intent.getStringExtra("url");
+            Log.i(TAG, "onReceive: " + url);
             final PendingResult pendingResult = goAsync();
             new Thread(()->{
                 OkHttpClient client = new OkHttpClient.Builder().build();
-                String http_ip = AdbBroadcastReceiver.this.checkIP(client, "http://checkip.amazonaws.com");
-                String https_ip = AdbBroadcastReceiver.this.checkIP(client, "https://checkip.amazonaws.com");
+                String http_ip = AdbBroadcastReceiver.this.checkIP(client, url);
                 StringWriter stringWriter = new StringWriter();
                 JsonWriter jsonWriter = new JsonWriter(stringWriter);
                 try {
                     jsonWriter.beginObject();
                     if (http_ip != null) {
-                        jsonWriter.name("http_ip").value(http_ip);
-                    }
-                    if (https_ip != null) {
-                        jsonWriter.name("https_ip").value(https_ip);
+                        jsonWriter.name("ip").value(http_ip);
                     }
                     jsonWriter.endObject();
                 } catch (IOException ignore) {
@@ -131,16 +128,20 @@ public class AdbBroadcastReceiver extends BroadcastReceiver {
             }).start();
         }
         else if(action.equals("send.mock")) {
-            mockGPS = new MockLocationProvider(LocationManager.GPS_PROVIDER, context);
-            mockWifi = new MockLocationProvider(LocationManager.NETWORK_PROVIDER, context);
+            try {
+                mockGPS = new MockLocationProvider(LocationManager.GPS_PROVIDER, context);
+                mockWifi = new MockLocationProvider(LocationManager.NETWORK_PROVIDER, context);
 
-            double lat = Double.parseDouble(intent.getStringExtra("lat") != null ? intent.getStringExtra("lat") : "0");
-            double lon = Double.parseDouble(intent.getStringExtra("lon") != null ? intent.getStringExtra("lon") : "0");
-            double alt = Double.parseDouble(intent.getStringExtra("alt") != null ? intent.getStringExtra("alt") : "0");
-            float accurate = Float.parseFloat(intent.getStringExtra("accurate") != null ? intent.getStringExtra("accurate") : "0");
-            Log.i(TAG, String.format("setting mock to Latitude=%f, Longitude=%f Altitude=%f Accuracy=%f", lat, lon, alt, accurate));
-            mockGPS.pushLocation(lat, lon, alt, accurate);
-            mockWifi.pushLocation(lat, lon, alt, accurate);
+                double lat = Double.parseDouble(intent.getStringExtra("lat") != null ? intent.getStringExtra("lat") : "0");
+                double lon = Double.parseDouble(intent.getStringExtra("lon") != null ? intent.getStringExtra("lon") : "0");
+                double alt = Double.parseDouble(intent.getStringExtra("alt") != null ? intent.getStringExtra("alt") : "0");
+                float accurate = Float.parseFloat(intent.getStringExtra("accurate") != null ? intent.getStringExtra("accurate") : "0");
+                Log.i(TAG, String.format("setting mock to Latitude=%f, Longitude=%f Altitude=%f Accuracy=%f", lat, lon, alt, accurate));
+                mockGPS.pushLocation(lat, lon, alt, accurate);
+                mockWifi.pushLocation(lat, lon, alt, accurate);
+            } catch (Exception e) {
+                Log.e(TAG, "onReceive: " + e);
+            }
         }
     }
 }

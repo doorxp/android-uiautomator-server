@@ -41,7 +41,7 @@ android {
     // 2: update all dependencies to latest
     // 6: input method, battery,rotation monitor
     androidGitVersion {
-        baseCode 1
+        baseCode 20251027
     }
     namespace 'com.github.uiautomator'
     defaultConfig {
@@ -59,6 +59,12 @@ android {
             keyAlias "uiautomator"
             keyPassword "uiautomator"
         }
+        debug {
+            storeFile file("../release.keystore")
+            storePassword "uiautomator-release-2015"
+            keyAlias "uiautomator"
+            keyPassword "uiautomator"
+        }
     }
 
     buildTypes {
@@ -66,6 +72,9 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
+        }
+        debug {
+            signingConfig signingConfigs.debug
         }
     }
 

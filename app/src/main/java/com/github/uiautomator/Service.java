@@ -1,6 +1,5 @@
 package com.github.uiautomator;
 
-import android.app.IntentService;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -8,30 +7,16 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
-import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.IBinder;
-import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 import android.util.Log;
-
 import com.github.uiautomator.monitor.AbstractMonitor;
-import com.github.uiautomator.monitor.BatteryMonitor;
 import com.github.uiautomator.monitor.HttpPostNotifier;
-import com.github.uiautomator.monitor.RotationMonitor;
 import com.github.uiautomator.monitor.WifiMonitor;
-import com.github.uiautomator.util.OkhttpManager;
-
-import org.json.JSONObject;
-
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
-
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.Response;
+import java.util.List;;
 
 public class Service extends android.app.Service {
     public static final String ACTION_START = "com.github.uiautomator.ACTION_START";
