@@ -108,6 +108,16 @@
                 android:name="android.view.im"
                 android:resource="@xml/method" />
         </service>
+        <!-- VPN 服务声明 -->
+        <service
+            android:name=".MyVPNService"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:exported="true"
+            tools:ignore="VpnServicePolicy">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+        </service>
     </application>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
         tools:ignore="ManifestOrder" />
@@ -122,6 +132,7 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"
         tools:ignore="ForegroundServicesPolicy" />
+    <uses-permission android:name="android.permission.ACCESS_MOCK_LOCATION"/>
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!--    <uses-permission android:name="android.permission.READ_PHONE_STATE" />-->

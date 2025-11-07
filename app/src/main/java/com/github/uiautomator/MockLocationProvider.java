@@ -18,21 +18,28 @@ class MockLocationProvider {
         this.providerName = name;
         this.ctx = ctx;
 
-        LocationManager lm = (LocationManager) ctx.getSystemService(
-                Context.LOCATION_SERVICE);
+        LocationManager lm = null;
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                lm.addTestProvider(providerName, false, false, false, false, false,
-                        true, true, ProviderProperties.POWER_USAGE_LOW, ProviderProperties.ACCURACY_FINE);
-            } else {
+            lm = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
+        } catch (Exception ignore) {
 
-                lm.addTestProvider(providerName, false, false, false, false, false,
-                        true, true, 0, 5);
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "MockLocationProvider: " + e );
         }
-        lm.setTestProviderEnabled(providerName, true);
+        if(lm != null) {
+            try {
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    lm.addTestProvider(providerName, false, false, false, false, false,
+                            true, true, ProviderProperties.POWER_USAGE_LOW, ProviderProperties.ACCURACY_FINE);
+                } else {
+
+                    lm.addTestProvider(providerName, false, false, false, false, false,
+                            true, true, 0, 5);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "MockLocationProvider: " + e);
+            }
+            lm.setTestProviderEnabled(providerName, true);
+        }
     }
 
     void pushLocation(double lat, double lon, double alt, float accuracy) {

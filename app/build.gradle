@@ -1,3 +1,5 @@
+import java.text.SimpleDateFormat
+
 /*
  * The MIT License (MIT)
  * Copyright (c) 2015 xiaocong@gmail.com
@@ -40,8 +42,13 @@ android {
     // 1: original version
     // 2: update all dependencies to latest
     // 6: input method, battery,rotation monitor
+
+    def date = new Date()
+    def sdf = new SimpleDateFormat("yyyyMMddHHmmss")
+    def formattedDate = sdf.format(date)
+
     androidGitVersion {
-        baseCode 20251027
+        baseCode formattedDate.toBigInteger()
     }
     namespace 'com.github.uiautomator'
     defaultConfig {
@@ -67,14 +74,35 @@ android {
         }
     }
 
+    applicationVariants.configureEach { variant ->
+        def flavor = variant.productFlavors[0]
+        def baseName = "app-uiautomator"
+        outputs.configureEach { output ->
+            outputFileName = "${baseName}.apk"
+        }
+
+        tasks.configureEach { task ->
+            if (task.name == "bundle${variant.name.capitalize()}") {
+                task.doLast {
+                    def dir = "${getBuildFile().getParent()}/${flavor.name}/${buildType.name}"
+                    def old_name = "${project.name}-${flavor.name}-${buildType.name}.aab"
+                    def new_name = "${baseName}.aab"
+                    file(dir + "/" + old_name).renameTo(dir + "/" + new_name)
+                }
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
+            manifestPlaceholders = [includeMockPermission: true]
         }
         debug {
             signingConfig signingConfigs.debug
+            manifestPlaceholders = [includeMockPermission: true]
         }
     }
 

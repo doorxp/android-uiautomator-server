@@ -3,11 +3,13 @@ package com.github.uiautomator;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.net.VpnService;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -30,6 +32,8 @@ import com.github.uiautomator.util.Permissons4App;
 
 public class MainActivity extends Activity {
     private final String TAG = "ATXMainActivity";
+
+    private static final int REQUEST_VPN_PERMISSION = 1002;
     private static final int REQUEST_IGNORE_BATTERY_OPTIMIZATIONS = 1001;
 
     private TextView tvInStorage;
@@ -81,6 +85,68 @@ public class MainActivity extends Activity {
 
         TextView viewVersion = (TextView) findViewById(R.id.app_version);
         viewVersion.setText("version: " + getAppVersionName());
+        if(getIntent().getBooleanExtra("proxy", false)
+                && getIntent().getBooleanExtra("from_notification", false)) {
+            String proxy = getIntent().getStringExtra("proxy");
+            String app = getIntent().getStringExtra("app");
+            startVpnWithPermission(proxy, app);
+        }
+    }
+
+    private void startVpnWithPermission(String proxy, String app) {
+        Intent prepare = VpnService.prepare(this);
+        if (prepare != null) {
+            // 需要授权，启动系统弹窗
+            // 使用一个封装的 Intent 来传递参数
+            Intent wrapperIntent = new Intent(this, MainActivity.class);
+            wrapperIntent.setAction("ACTION_START_VPN_AFTER_AUTH");
+            wrapperIntent.putExtra("proxy", proxy);
+            wrapperIntent.putExtra("app", app);
+            wrapperIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                    this,
+                    REQUEST_VPN_PERMISSION,
+                    wrapperIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            // 将 pendingIntent 作为 extra 传给 prepareIntent
+            prepare.putExtra("extern_intent", pendingIntent);
+            startActivityForResult(prepare, REQUEST_VPN_PERMISSION);
+        } else {
+            // 已授权，直接启动服务
+            startVpnService(proxy, app);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_VPN_PERMISSION) {
+            if (resultCode == RESULT_OK) {
+                // 授权成功，从 Intent 中获取参数并启动服务
+                String proxy = getIntent().getStringExtra("proxy");
+                String app = getIntent().getStringExtra("app");
+                startVpnService(proxy, app);
+            } else {
+                Toast.makeText(this, "VPN 授权被拒绝", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void startVpnService(String proxy, String app) {
+        Intent serviceIntent = new Intent(this, MyVPNService.class);
+        serviceIntent.setAction(MyVPNService.ACTION_CONNECT);
+        serviceIntent.putExtra("proxy", proxy);
+        serviceIntent.putExtra("app", app);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+        finish(); // 可选：启动后关闭 Activity
     }
 
     private String getAppVersionName() {
@@ -109,24 +175,6 @@ public class MainActivity extends Activity {
         intent.setAction(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
         intent.setData(android.net.Uri.parse("package:" + getPackageName()));
         startActivityForResult(intent, REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) {
-            // Check if the user granted the request or not
-            Log.d(TAG, "requestIgnoreBatteryOptimizations resultCode: " + resultCode);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (isIgnoringBatteryOptimizations()) {
-                    // User granted the request
-                    showToast("requestIgnoreBatteryOptimizations success");
-                } else {
-                    showToast("requestIgnoreBatteryOptimizations failure");
-                    // User didn't grant the request
-                }
-            }
-        }
     }
 
     @RequiresApi(api=Build.VERSION_CODES.M)
